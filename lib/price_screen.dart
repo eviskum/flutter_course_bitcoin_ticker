@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_course_bitcoin_ticker/coin_data.dart';
 import 'dart:io' show Platform;
 
+import 'package:flutter_course_bitcoin_ticker/crypto_service.dart';
+
 class PriceScreen extends StatefulWidget {
   @override
   _PriceScreenState createState() => _PriceScreenState();
@@ -10,6 +12,41 @@ class PriceScreen extends StatefulWidget {
 
 class _PriceScreenState extends State<PriceScreen> {
   String? selectedCurrency = 'DKK';
+
+  Map<String, String> exchangeRateTxt = {};
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    setInitialRateTxt();
+  }
+
+  void setInitialRateTxt() {
+    setState(() {
+      exchangeRateTxt.clear();
+      for (String crypto in cryptoList) {
+        exchangeRateTxt.addAll({crypto: '1 $crypto = ? ${selectedCurrency ?? '???'}'});
+        // exchangeRateTxt.add('1 $crypto = ? ${selectedCurrency ?? '???'}');
+      }
+    });
+  }
+
+  void updatedRateTxt() {
+    if (selectedCurrency == null) return;
+    for (String crypto in cryptoList) {
+      CryptoService.getExchangeRate(cryptoCurrency: crypto, realCurrency: selectedCurrency!).then((value) {
+        if (value != null) {
+          setState(() {
+            exchangeRateTxt[crypto] = '1 $crypto = ${value.rate.toStringAsFixed(2)} ${selectedCurrency}';
+          });
+        }
+      }).catchError((e) {
+        print('Error getting exchange rate:');
+        print(e);
+      });
+    }
+  }
 
   List<DropdownMenuItem<String>> generateCurrencyDropdownList() {
     List<DropdownMenuItem<String>> currencyList = [];
@@ -27,6 +64,14 @@ class _PriceScreenState extends State<PriceScreen> {
     return currencyList;
   }
 
+  List<Padding> generateExchangeRateList() {
+    List<Padding> exchangeList = [];
+    exchangeRateTxt.forEach((key, value) {
+      exchangeList.add(ExchangeRateCard(value));
+    });
+    return exchangeList;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -37,27 +82,8 @@ class _PriceScreenState extends State<PriceScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Padding(
-            padding: EdgeInsets.fromLTRB(18.0, 18.0, 18.0, 0),
-            child: Card(
-              color: Colors.lightBlueAccent,
-              elevation: 5.0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.0),
-              ),
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 15.0, horizontal: 28.0),
-                child: Text(
-                  '1 BTC = ? USD',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 20.0,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-          ),
+          ...generateExchangeRateList(),
+          // ExchangeRateCard('1 BTC = ? USD'),
           Container(
             height: 150.0,
             alignment: Alignment.center,
@@ -71,6 +97,30 @@ class _PriceScreenState extends State<PriceScreen> {
     );
   }
 
+  Padding ExchangeRateCard(String rateTxt) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(18.0, 18.0, 18.0, 0),
+      child: Card(
+        color: Colors.lightBlueAccent,
+        elevation: 5.0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.0),
+        ),
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 15.0, horizontal: 28.0),
+          child: Text(
+            rateTxt,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 20.0,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   DropdownButton<String> materialCurrencyDropdown() {
     return DropdownButton<String>(
       items: generateCurrencyDropdownList(),
@@ -78,6 +128,7 @@ class _PriceScreenState extends State<PriceScreen> {
         setState(() {
           selectedCurrency = value;
         });
+        updatedRateTxt();
       },
       value: selectedCurrency,
     );
@@ -87,7 +138,10 @@ class _PriceScreenState extends State<PriceScreen> {
     return CupertinoPicker(
       itemExtent: 32.0,
       onSelectedItemChanged: (idx) {
-        selectedCurrency = currenciesList[idx];
+        setState(() {
+          selectedCurrency = currenciesList[idx];
+        });
+        updatedRateTxt();
       },
       children: generateCupertinoList(),
     );

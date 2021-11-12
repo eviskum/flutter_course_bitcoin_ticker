@@ -30,14 +30,3 @@ const List<String> cryptoList = [
 ];
 
 class CoinData {}
-
-
-// https://rest.coinapi.io/v1/exchangerate/BTC/USD
-// apikey=?
-
-// {
-//   "time": "2017-08-09T14:31:18.3150000Z",
-//   "asset_id_base": "BTC",
-//   "asset_id_quote": "USD",
-//   "rate": 3260.3514321215056208129867667
-// }
